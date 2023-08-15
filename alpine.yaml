@@ -1,0 +1,34 @@
+# This example requires Lima v0.7.0 or later.
+images:
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.27/alpine-lima-std-3.17.0-x86_64.iso"
+  arch: "x86_64"
+  digest: "sha512:07b88838734de63edf302a531aaf57f5a48ec31b31b8a95740faa4fac11852b375c5c83180ff34311ee284b8123536b86b70f0606591b1986e9af2268f3ea675"
+
+# 定义虚拟机需要使用哪个架构启动(对应上面的镜像)
+arch: "x86_64"
+
+# CPU 数量
+cpus: 2
+# 内存大小
+memory: "512M"
+# 磁盘大小
+disk: "1G"
+
+# 虚拟机与 macOS 宿主机挂载时使用的挂载技术
+# 目前推荐 9p, 可换成 sshfs, 但是 sshfs 会有权限问题
+mountType: 9p
+
+# 定义虚拟机和 macOS 宿主机有哪些目录可以共享
+mounts:
+# - location: "~"
+- location: "/tmp/lima"
+  writable: true
+  9p:
+    # 对于可写的共享目录, cache 推荐类型为 mmap, 不写好像默认 fscache
+    cache: "mmap"
+
+# The built-in containerd installer does not support Alpine currently.
+# Hint: use the "rd" ISO instead of the "std" ISO to enable containerd: https://github.com/lima-vm/alpine-lima/releases/
+containerd:
+  system: false
+  user: false

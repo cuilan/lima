@@ -1,0 +1,101 @@
+# 定义每个平台架构需要使用的启动镜像
+images:
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+# 定义虚拟机需要使用哪个架构启动(对应上面的镜像)
+arch: "x86_64"
+
+# CPU 数量
+cpus: 4
+
+# 内存大小
+memory: "8G"
+
+# 磁盘大小
+disk: "30G"
+
+# 虚拟机与 macOS 宿主机挂载时使用的挂载技术
+# 目前推荐 9p, 可换成 sshfs, 但是 sshfs 会有权限问题
+mountType: 9p
+
+# 定义虚拟机和 macOS 宿主机有哪些目录可以共享
+mounts:
+- location: "~"
+  # 定义虚拟机对这个目录是否可写
+  writable: true
+  9p:
+    # 对于可写的共享目录, cache 推荐类型为 mmap, 不写好像默认 fscache
+    cache: "mmap"
+- location: "/tmp/lima"
+  writable: true
+  9p:
+    cache: "mmap"
+# containerd is managed by Docker, not by Lima, so the values are set to false here.
+containerd:
+  system: false
+  user: false
+
+# cloud-init hook 定义
+provision:
+# 定义以什么权限在虚拟机内执行脚本
+- mode: system
+  # This script defines the host.docker.internal hostname when hostResolver is disabled.
+  # It is also needed for lima 0.8.2 and earlier, which does not support hostResolver.hosts.
+  # Names defined in /etc/hosts inside the VM are not resolved inside containers when
+  # using the hostResolver; use hostResolver.hosts instead (requires lima 0.8.3 or later).
+  script: |
+    #!/bin/sh
+    sed -i 's/host.lima.internal.*/host.lima.internal host.docker.internal/' /etc/hosts
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if command -v docker >/dev/null 2>&1; then
+      docker run --platform=linux/amd64 --privileged --rm tonistiigi/binfmt --install all
+      exit 0
+    else
+      export DEBIAN_FRONTEND=noninteractive
+      curl -fsSL https://get.docker.com | sh
+      docker run --platform=linux/amd64 --privileged --rm tonistiigi/binfmt --install all
+      # NOTE: you may remove the lines below, if you prefer to use rootful docker, not rootless
+      systemctl disable --now docker
+      apt-get install -y uidmap dbus-user-session
+    fi
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    systemctl --user start dbus
+    dockerd-rootless-setuptool.sh install
+    docker context use rootless
+probes:
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v docker >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "docker is not installed yet"
+      exit 1
+    fi
+    if ! timeout 30s bash -c "until pgrep rootlesskit; do sleep 3; done"; then
+      echo >&2 "rootlesskit (used by rootless docker) is not running"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log". in the guest
+hostResolver:
+  # hostResolver.hosts requires lima 0.8.3 or later. Names defined here will also
+  # resolve inside containers, and not just inside the VM itself.
+  hosts:
+    host.docker.internal: host.lima.internal
+portForwards:
+- guestSocket: "/run/user/{{.UID}}/docker.sock"
+  hostSocket: "{{.Dir}}/sock/docker.sock"
+# 自己定义的启动后消息输出
+message: |
+  To run `docker` on the host (assumes docker-cli is installed), run the following commands:
+  ------
+  docker context create amd64 --docker "host=unix://{{.Dir}}/sock/docker.sock"
+  docker context use amd64
+  ------
