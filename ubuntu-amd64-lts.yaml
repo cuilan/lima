@@ -22,7 +22,7 @@ cpus: 4
 # 内存大小
 memory: "8G"
 # 磁盘大小
-disk: "30G"
+disk: "40G"
 
 # 虚拟机与 macOS 宿主机挂载时使用的挂载技术
 # 目前推荐 9p, 可换成 sshfs, 但是 sshfs 会有权限问题

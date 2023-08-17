@@ -35,7 +35,7 @@ cpus: 4
 # 内存大小
 memory: "8G"
 # 磁盘大小
-disk: "30G"
+disk: "40G"
 
 # Mounts are disabled in this example, but can be enabled optionally.
 mounts: []
