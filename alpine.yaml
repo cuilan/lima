@@ -1,8 +1,10 @@
-# This example requires Lima v0.7.0 or later.
+# This template requires Lima v0.7.0 or later.
+# Using the Alpine 3.19 aarch64 image with vmType=vz requires macOS Ventura 13.3 or later.
+
 images:
-- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.27/alpine-lima-std-3.17.0-x86_64.iso"
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.35/alpine-lima-std-3.19.0-x86_64.iso"
   arch: "x86_64"
-  digest: "sha512:07b88838734de63edf302a531aaf57f5a48ec31b31b8a95740faa4fac11852b375c5c83180ff34311ee284b8123536b86b70f0606591b1986e9af2268f3ea675"
+  digest: "sha512:e02599dc7fc4dc279d66d800f6edc68f6f112c4b370d4c74f43040214c53b23ae4c903ce56c7083fd56d5027ec33711d30d1c2e71836c60dc3bf639f76d4fa0e"
 
 # 定义虚拟机需要使用哪个架构启动(对应上面的镜像)
 arch: "x86_64"
