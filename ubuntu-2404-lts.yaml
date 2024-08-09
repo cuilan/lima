@@ -1,0 +1,50 @@
+# 定义平台架构需要使用的启动镜像
+# This template requires Lima v0.7.0 or later.
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release-20240725/ubuntu-24.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:d2377667ea95222330ca2287817403c85178dad397e9fed768a9b4aec79d2a7f"
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release-20240725/ubuntu-24.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:2c47dbf04477993ebcd921250b1aab8e582d2fdd03d7576b57d28b6aeeff1427"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+
+# 定义虚拟机需要使用哪个架构启动(对应上面的镜像)
+arch: "x86_64"
+
+# CPU 数量
+cpus: 4
+# 内存大小
+memory: "8G"
+# 磁盘大小
+disk: "40G"
+
+# 虚拟机与 macOS 宿主机挂载时使用的挂载技术
+# 目前推荐 9p, 可换成 sshfs, 但是 sshfs 会有权限问题
+mountType: 9p
+
+# 定义虚拟机和 macOS 宿主机有哪些目录可以共享
+mounts:
+# - location: "~"
+  # 定义虚拟机对这个目录是否可写
+  # writable: true
+  # 9p:
+    # 对于可写的共享目录, cache 推荐类型为 mmap, 不写好像默认 fscache
+    # cache: "mmap"
+- location: "/tmp/lima/ubuntu"
+  writable: true
+  9p:
+    cache: "mmap"
+
+# 自己定义的启动后消息输出
+message: |
+  To run the following commands:
+  ------
+  limactl shell ubuntu-2404-lts
+  ------

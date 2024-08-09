@@ -45,5 +45,5 @@ mounts:
 message: |
   To run the following commands:
   ------
-  limactl shell ubuntu-amd64-lts
+  limactl shell ubuntu-2204-lts
   ------

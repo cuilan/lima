@@ -1,8 +1,18 @@
+# A template to use Docker instead of containerd & nerdctl
+# $ limactl start ./docker.yaml
+# $ limactl shell docker docker run -it -v $HOME:$HOME --rm alpine
+
+# To run `docker` on the host (assumes docker-cli is installed):
+# $ export DOCKER_HOST=$(limactl list docker --format 'unix://{{.Dir}}/sock/docker.sock')
+# $ docker ...
+
+# This template requires Lima v0.8.0 or later
+
 # 定义每个平台架构需要使用的启动镜像
 images:
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release-20240725/ubuntu-24.04-server-cloudimg-amd64.img"
   arch: "x86_64"
-- location: "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img"
+- location: "https://cloud-images.ubuntu.com/releases/24.04/release-20240725/ubuntu-24.04-server-cloudimg-arm64.img"
   arch: "aarch64"
 
 # 定义虚拟机需要使用哪个架构启动(对应上面的镜像)
@@ -10,16 +20,14 @@ arch: "x86_64"
 
 # CPU 数量
 cpus: 4
-
 # 内存大小
 memory: "8G"
-
 # 磁盘大小
 disk: "30G"
 
 # 虚拟机与 macOS 宿主机挂载时使用的挂载技术
 # 目前推荐 9p, 可换成 sshfs, 但是 sshfs 会有权限问题
-mountType: 9p
+# mountType: 9p
 
 # 定义虚拟机和 macOS 宿主机有哪些目录可以共享
 mounts:
@@ -97,6 +105,7 @@ portForwards:
 message: |
   To run `docker` on the host (assumes docker-cli is installed), run the following commands:
   ------
-  docker context create amd64 --docker "host=unix://{{.Dir}}/sock/docker.sock"
-  docker context use amd64
+  docker context create lima-{{.Name}} --docker "host=unix://{{.Dir}}/sock/docker.sock"
+  docker context use lima-{{.Name}}
+  docker run hello-world
   ------
