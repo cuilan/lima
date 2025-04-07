@@ -1,0 +1,24 @@
+# This template requires Lima v0.7.0 or later
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+- location: "https://cloud.debian.org/images/cloud/bookworm/20250316-2053/debian-12-genericcloud-amd64-20250316-2053.qcow2"
+  arch: "x86_64"
+  digest: "sha512:0ea74c246c5eb8c6eb5b8e3b8b5268b16a791dfbc8f0bca27d9d787a3f4c50a7830bfc690e6902dfe78031fb2b2c3892349990d6b26b13112252a81d6f20f792"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+- location: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
+  arch: "x86_64"
+mountTypesUnsupported: ["9p"]
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+
+# 定义虚拟机需要使用哪个架构启动(对应上面的镜像)
+arch: "x86_64"
+# CPU 数量
+cpus: 4
+# 内存大小
+memory: "8G"
+# 磁盘大小
+disk: "50G"
