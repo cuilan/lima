@@ -1,30 +1,57 @@
-# A template to use Docker instead of containerd & nerdctl
-# $ limactl start ./docker.yaml
-# $ limactl shell docker docker run -it -v $HOME:$HOME --rm alpine
+# A template to use Docker (rootless) instead of containerd & nerdctl
+# $ limactl start ./docker-rootless.yaml
+# $ limactl shell docker-rootless docker run -it -v $HOME:$HOME --rm alpine
 
 # To run `docker` on the host (assumes docker-cli is installed):
-# $ export DOCKER_HOST=$(limactl list docker --format 'unix://{{.Dir}}/sock/docker.sock')
+# $ export DOCKER_HOST=$(limactl list docker-rootless --format 'unix://{{.Dir}}/sock/docker.sock')
 # $ docker ...
 
-# This template requires Lima v0.8.0 or later
+minimumLimaVersion: 2.0.0
+
+# 定义每个平台架构需要使用的启动镜像
 images:
-# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
-- location: "https://cloud-images.ubuntu.com/releases/noble/release-20250313/ubuntu-24.04-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/noble/release-20251026/ubuntu-24.04-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:eacac65efe9e9bae0cbcb3f9d5c2b5e8c5313fa78a3bc401c3fb28b2d48cefc0"
+  digest: "sha256:85743244cc8f2f47384480c81dbb677585d20ed693127667dbfb116f1682f793"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 - location: "https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-amd64.img"
   arch: "x86_64"
+
+# 定义虚拟机需要使用哪个架构启动(对应上面的镜像)
+arch: "x86_64"
+
+# CPU 数量
+cpus: 4
+# 内存大小
+memory: "8G"
+# 磁盘大小
+disk: "50G"
+
+# 虚拟机与 macOS 宿主机挂载时使用的挂载技术
+# 目前推荐 9p, 可换成 sshfs, 但是 sshfs 会有权限问题
+# mountType: 9p
+
+# 定义虚拟机和 macOS 宿主机有哪些目录可以共享
 mounts:
 - location: "~"
+  # 定义虚拟机对这个目录是否可写
+  writable: true
+  9p:
+    # 对于可写的共享目录, cache 推荐类型为 mmap, 不写好像默认 fscache
+    cache: "mmap"
 - location: "/tmp/lima"
   writable: true
+  9p:
+    cache: "mmap"
 # containerd is managed by Docker, not by Lima, so the values are set to false here.
 containerd:
   system: false
   user: false
+
+# cloud-init hook 定义
 provision:
+# 定义以什么权限在虚拟机内执行脚本
 - mode: system
   # This script defines the host.docker.internal hostname when hostResolver is disabled.
   # It is also needed for lima 0.8.2 and earlier, which does not support hostResolver.hosts.
@@ -43,6 +70,12 @@ provision:
     # NOTE: you may remove the lines below, if you prefer to use rootful docker, not rootless
     systemctl disable --now docker
     apt-get install -y uidmap dbus-user-session
+- mode: yq
+  path: "{{.Home}}/.config/docker/daemon.json"
+  expression: |
+    .features.cdi = true |
+    .features.containerd-snapshotter = {{.Param.containerdSnapshotter}}
+  owner: "{{.User}}"
 - mode: user
   script: |
     #!/bin/bash
@@ -50,6 +83,7 @@ provision:
     systemctl --user start dbus
     dockerd-rootless-setuptool.sh install
     docker context use rootless
+# 探针
 probes:
 - script: |
     #!/bin/bash
@@ -71,6 +105,7 @@ hostResolver:
 portForwards:
 - guestSocket: "/run/user/{{.UID}}/docker.sock"
   hostSocket: "{{.Dir}}/sock/docker.sock"
+# 自己定义的启动后消息输出
 message: |
   To run `docker` on the host (assumes docker-cli is installed), run the following commands:
   ------
@@ -78,3 +113,5 @@ message: |
   docker context use lima-{{.Name}}
   docker run hello-world
   ------
+param:
+  containerdSnapshotter: true

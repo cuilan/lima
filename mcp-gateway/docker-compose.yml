@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  mcp-gateway:
+    build: .
+    container_name: mcp-gateway
+    ports:
+      - "3000:3000"
+    volumes:
+      # 挂载你的工作目录
+      - ~/code:/workspace:ro
+      # 挂载 Obsidian vault（如果有）
+      - ~/Documents/Obsidian:/obsidian:ro
+      # 挂载 git 配置
+      - ~/.gitconfig:/root/.gitconfig:ro
+      - ~/.ssh:/root/.ssh:ro
+      # MCP 配置和数据
+      - ./mcp-config:/mcp/config
+      - ./mcp-data:/mcp/data
+    environment:
+      - NODE_ENV=production
+      # GitHub token（如果需要）
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+

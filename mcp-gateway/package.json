@@ -1,0 +1,21 @@
+{
+  "name": "mcp-gateway",
+  "version": "1.0.0",
+  "description": "HTTP Gateway for MCP (Model Context Protocol) servers running in Docker",
+  "main": "mcp-http-gateway.js",
+  "scripts": {
+    "start": "node mcp-http-gateway.js",
+    "dev": "nodemon mcp-http-gateway.js"
+  },
+  "keywords": ["mcp", "model-context-protocol", "gateway", "docker"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
+
