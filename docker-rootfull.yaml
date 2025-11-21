@@ -6,7 +6,7 @@
 # $ export DOCKER_HOST=$(limactl list docker-rootful --format 'unix://{{.Dir}}/sock/docker.sock')
 # $ docker ...
 
-minimumLimaVersion: 2.0.0
+minimumLimaVersion: 0.20.0
 
 # 定义每个平台架构需要使用的启动镜像
 images:
@@ -65,31 +65,57 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
     command -v docker >/dev/null 2>&1 && exit 0
+    
+    # 配置 Docker socket 权限
+    if [ ! -e /etc/systemd/system/docker.socket.d/override.conf ]; then
+      mkdir -p /etc/systemd/system/docker.socket.d
+      printf '[Socket]\nSocketUser=%s\n' '{{.User}}' >/etc/systemd/system/docker.socket.d/override.conf
+    fi
+    
+    # 安装 Docker
     export DEBIAN_FRONTEND=noninteractive
     curl -fsSL https://get.docker.com | sh
-- mode: yq
-  path: /etc/systemd/system/docker.socket.d/override.conf
-  format: ini
-  expression: .Socket.SocketUser="{{.User}}"
-- mode: yq
-  path: "/etc/docker/daemon.json"
-  expression: |
-    .features.cdi = true |
-    .features.containerd-snapshotter = {{.Param.containerdSnapshotter}}
-# 探针
+    
+    # 配置 Docker daemon
+    mkdir -p /etc/docker
+    cat >/etc/docker/daemon.json <<"EOFJSON"
+    {
+      "features": {
+        "cdi": true,
+        "containerd-snapshotter": true
+      }
+    }
+    EOFJSON
+    
+    # 重启 Docker 服务
+    systemctl daemon-reload
+    systemctl restart docker
+# 探针（健康检查）
 probes:
-- script: |
+- description: "检查 Docker 是否安装并运行"
+  script: |
     #!/bin/bash
     set -eux -o pipefail
-    if ! timeout 30s bash -c "until command -v docker >/dev/null 2>&1; do sleep 3; done"; then
-      echo >&2 "docker is not installed yet"
+    # 等待 Docker 安装（最多 2 分钟）
+    if ! timeout 120s bash -c "until command -v docker >/dev/null 2>&1; do sleep 5; done"; then
+      echo >&2 "❌ Docker 未安装"
+      echo >&2 "查看日志: tail /var/log/cloud-init-output.log"
       exit 1
     fi
-    if ! timeout 30s bash -c "until pgrep dockerd; do sleep 3; done"; then
-      echo >&2 "dockerd is not running"
+    # 等待 dockerd 启动（最多 2 分钟）
+    if ! timeout 120s bash -c "until pgrep dockerd; do sleep 5; done"; then
+      echo >&2 "❌ dockerd 未运行"
+      echo >&2 "查看日志: sudo journalctl -u docker"
       exit 1
     fi
-  hint: See "/var/log/cloud-init-output.log" in the guest
+    # 测试 Docker 命令
+    docker version
+    echo "✅ Docker 已就绪"
+  hint: |
+    查看详细日志:
+    - tail /var/log/cloud-init-output.log
+    - sudo journalctl -u docker
+    - sudo systemctl status docker
 hostResolver:
   # hostResolver.hosts requires lima 0.8.3 or later. Names defined here will also
   # resolve inside containers, and not just inside the VM itself.
@@ -98,6 +124,9 @@ hostResolver:
 portForwards:
 - guestSocket: "/var/run/docker.sock"
   hostSocket: "{{.Dir}}/sock/docker.sock"
+# 添加服务端口
+- guestPort: 3000
+  hostPort: 3000
 # 自己定义的启动后消息输出
 message: |
   To run `docker` on the host (assumes docker-cli is installed), run the following commands:
@@ -106,5 +135,3 @@ message: |
   docker context use lima-{{.Name}}
   docker run hello-world
   ------
-param:
-  containerdSnapshotter: true
