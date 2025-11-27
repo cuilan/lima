@@ -121,12 +121,10 @@ hostResolver:
   # resolve inside containers, and not just inside the VM itself.
   hosts:
     host.docker.internal: host.lima.internal
+# 自动端口转发，将虚拟机内的 Docker socket 转发到宿主机
 portForwards:
 - guestSocket: "/var/run/docker.sock"
   hostSocket: "{{.Dir}}/sock/docker.sock"
-# 添加服务端口
-- guestPort: 3000
-  hostPort: 3000
 # 自己定义的启动后消息输出
 message: |
   To run `docker` on the host (assumes docker-cli is installed), run the following commands:
